@@ -12,27 +12,44 @@ using MimeKit;
 
 class Program
 {
-    private const string FileFromPath = "C:\\Users\\admin\\Desktop\\Praktik\\Speechtotext";
-    private const string FileFromName = "MSG00001.wav";
-    private const string FileToRead = FileFromPath + "\\" + FileFromName;
+    private const string FileFromPath = "C:\\Users\\admin\\Desktop\\ljud";
+    private static string FileFromName;
+
+    //Kommer inte att behövas -----
+    private static string FileFromName2 = "MSG00001.wav";
+    private static string FileToRead = FileFromPath + "\\" + FileFromName2;
     private const string FileToPath = "C:\\Users\\admin\\Desktop\\Result";
     private const string FileToName = "WriteText2.txt";
     private const string FileToWrite = FileToPath + "\\" + FileToName;
+    // --------
+
     private static string TranscribedMessage = null;
+    private static string FromName = "Avvikelse";
+    private static string FromEmail = "avvikelse@testboka.net";
+    private static string Client = "smtp.simply.com";
+    private static int Port = 587;
+    private static string Pass = "Elektronik!100";
+    private static string ToName = "Avvikelse2";
+    private static string ToEmail = "avvikelse2@testboka.net";
 
 
     async static Task FromFile(SpeechConfig speechConfig)
     {
-        using var audioConfig = AudioConfig.FromWavFileInput(FileToRead);
+        string[] fileArray = Directory.GetFiles(FileFromPath, "*.wav");
+        FileFromName = fileArray[0];
+        using var audioConfig = AudioConfig.FromWavFileInput(FileFromName);
         //using var audioConfig = AudioConfig.FromWavFileInput("PathToFile.wav");
         using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
 
         var result = await recognizer.RecognizeOnceAsync();
         Console.WriteLine($"RECOGNIZED: Text={result.Text}");
+        // Skall tas bort
         SaveText(result.Text);
-        TranscribedMessage = result.Text;
-    }
 
+        TranscribedMessage = result.Text;
+
+    }
+    // Skall tas bort
     static void SaveText(string text)
     {
         File.WriteAllText(FileToWrite, text);
@@ -46,8 +63,8 @@ class Program
 
         // Send email
         var message = new MimeMessage();
-        message.From.Add(new MailboxAddress("Avvikelse", "avvikelse@testboka.net"));
-        message.To.Add(new MailboxAddress("Avvikelse2", "avvikelse2@testboka.net"));
+        message.From.Add(new MailboxAddress(FromName, FromEmail));
+        message.To.Add(new MailboxAddress(ToName, ToEmail));
         message.Subject = "Transkriberad text";
 
         message.Body = new TextPart("plain")
@@ -57,13 +74,19 @@ class Program
 
         using (var client = new SmtpClient())
         {
-            client.Connect("smtp.simply.com", 587, false);
+            client.Connect(Client, Port, false);
 
             // Note: only needed if the SMTP server requires authentication
-            client.Authenticate("avvikelse@testboka.net", "Elektronik!100");
+            client.Authenticate(FromEmail, Pass);
 
             client.Send(message);
             client.Disconnect(true);
+        }
+        DirectoryInfo di = new DirectoryInfo(FileFromPath);
+
+        foreach (FileInfo file in di.GetFiles())
+        {
+            file.Delete();
         }
     }
 
