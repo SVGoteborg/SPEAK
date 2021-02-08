@@ -1,3 +1,12 @@
 {
-
+  "FileFromPath": "C:\\Users\\admin\\Desktop\\AppSpeak\\ljud",
+  "fromName": "Avvikelse",
+  "fromEmail": "avvikelse@testboka.net",
+  "Client": "smtp.simply.com",
+  "port": "587",
+  "passw": "Elektronik!100",
+  "toName": "Avvikelse2",
+  "toEmail": "avvikelse2@testboka.net",
+  "AzureSubscription": "ad600bd7bbb84bda813532091b74fd2b",
+  "AzureServer": "westeurope"
 }
