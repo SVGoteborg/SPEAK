@@ -24,13 +24,15 @@ class Program
     // --------
 
     private static string TranscribedMessage = null;
-    private static string FromName = "Avvikelse";
-    private static string FromEmail = "avvikelse@testboka.net";
+    private static string fromName = "Avvikelse";
+    private static string fromEmail = "avvikelse@testboka.net";
     private static string Client = "smtp.simply.com";
-    private static int Port = 587;
-    private static string Pass = "Elektronik!100";
-    private static string ToName = "Avvikelse2";
-    private static string ToEmail = "avvikelse2@testboka.net";
+    private static int port = 587;
+    private static string passw = "Elektronik!100";
+    private static string toName = "Avvikelse2";
+    private static string toEmail = "avvikelse2@testboka.net";
+    private const string AzureSubscription = "ad600bd7bbb84bda813532091b74fd2b";
+    private const string AzureServer = "westeurope";
 
 
     async static Task FromFile(SpeechConfig speechConfig)
@@ -57,14 +59,14 @@ class Program
 
     async static Task Main(string[] args)
     {
-        var speechConfig = SpeechConfig.FromSubscription("ad600bd7bbb84bda813532091b74fd2b", "westeurope");
+        var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
         speechConfig.SpeechRecognitionLanguage = "sv-SE";
         await FromFile(speechConfig);
 
         // Send email
         var message = new MimeMessage();
-        message.From.Add(new MailboxAddress(FromName, FromEmail));
-        message.To.Add(new MailboxAddress(ToName, ToEmail));
+        message.From.Add(new MailboxAddress(fromName, fromEmail));
+        message.To.Add(new MailboxAddress(toName, toEmail));
         message.Subject = "Transkriberad text";
 
         message.Body = new TextPart("plain")
@@ -74,10 +76,10 @@ class Program
 
         using (var client = new SmtpClient())
         {
-            client.Connect(Client, Port, false);
+            client.Connect(Client, port, false);
 
             // Note: only needed if the SMTP server requires authentication
-            client.Authenticate(FromEmail, Pass);
+            client.Authenticate(fromEmail, passw);
 
             client.Send(message);
             client.Disconnect(true);
