@@ -7,32 +7,36 @@ using Microsoft.CognitiveServices.Speech.Audio;
 using MailKit.Net.Smtp;
 using MailKit;
 using MimeKit;
-
-
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
+using System.Collections.Generic;
 
 class Program
 {
-    private const string FileFromPath = "C:\\Users\\admin\\Desktop\\ljud";
+    private const string jsonSettings = "C:\\Users\\admin\\Desktop\\AppSpeak\\settings.json";
+    private static string FileFromPath = "C:\\Users\\admin\\Desktop\\AppSpeak\\ljud";
     private static string FileFromName;
 
     //Kommer inte att behövas -----
     private static string FileFromName2 = "MSG00001.wav";
     private static string FileToRead = FileFromPath + "\\" + FileFromName2;
-    private const string FileToPath = "C:\\Users\\admin\\Desktop\\Result";
+    private const string FileToPath = "C:\\Users\\admin\\Desktop\\AppSpeak\\Result";
     private const string FileToName = "WriteText2.txt";
     private const string FileToWrite = FileToPath + "\\" + FileToName;
     // --------
 
     private static string TranscribedMessage = null;
-    private static string fromName = "Avvikelse";
-    private static string fromEmail = "avvikelse@testboka.net";
+    private static string fromName = null;
+    private static string fromEmail = null;
+    //private static string fromName = "Avvikelse";
+    //private static string fromEmail = "avvikelse@testboka.net";
     private static string Client = "smtp.simply.com";
     private static int port = 587;
     private static string passw = "Elektronik!100";
     private static string toName = "Avvikelse2";
     private static string toEmail = "avvikelse2@testboka.net";
-    private const string AzureSubscription = "ad600bd7bbb84bda813532091b74fd2b";
-    private const string AzureServer = "westeurope";
+    private static string AzureSubscription = "ad600bd7bbb84bda813532091b74fd2b";
+    private static string AzureServer = "westeurope";
 
 
     async static Task FromFile(SpeechConfig speechConfig)
@@ -57,8 +61,34 @@ class Program
         File.WriteAllText(FileToWrite, text);
     }
 
-    async static Task Main(string[] args)
+    static void readJson()
     {
+        JObject o1 = JObject.Parse(File.ReadAllText(jsonSettings));
+
+        // För test
+        foreach (JProperty property in o1.Properties())
+        {
+            Console.WriteLine(property.Name + " - " + property.Value);
+        }
+        Console.WriteLine();
+        // -------
+
+        FileFromPath = (string)o1["FileFromPath"];
+        fromName = (string)o1["fromName"];
+        fromEmail = (string)o1["fromEmail"];
+        Client = (string)o1["Client"];
+        port = (int)o1["port"];
+        passw = (string)o1["passw"];
+        toName = (string)o1["toName"];
+        AzureSubscription = (string)o1["AzureSubscription"];
+        AzureServer = (string)o1["AzureServer"];
+
+    }
+    
+
+async static Task Main(string[] args)
+    {
+        readJson();
         var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
         speechConfig.SpeechRecognitionLanguage = "sv-SE";
         await FromFile(speechConfig);
