@@ -14,8 +14,10 @@ using MailKit.Net.Pop3;
 
 class Program
 {
-    private const string jsonSettings = "C:\\Users\\admin\\Desktop\\AppSpeak\\settings.json";
-    private static string FileFromPath = "C:\\Users\\admin\\Desktop\\AppSpeak\\ljud";
+    //private const string jsonSettings = "C:\\Users\\admin\\Desktop\\AppSpeak\\settings.json";
+    private const string jsonSettings = "C:\\AppSpeak\\settings.json";
+    private static string FileFromPath = "C:\\AppSpeak\\ljud";
+    //private static string FileFromPath = "C:\\Users\\admin\\Desktop\\AppSpeak\\ljud";
     private static string FileFromName;
 
     //Kommer inte att behövas -----
@@ -26,11 +28,10 @@ class Program
     private const string FileToWrite = FileToPath + "\\" + FileToName;
     // --------
 
+    private static MimeMessage eMail = null;
     private static string TranscribedMessage = null;
-    private static string fromName = null;
-    private static string fromEmail = null;
-    //private static string fromName = "Avvikelse";
-    //private static string fromEmail = "avvikelse@testboka.net";
+    private static string fromName = "Avvikelse";
+    private static string fromEmail = "avvikelse@testboka.net";
     private static string fromClient = "mail.simply.com";
     private static int fromPort = 110;
     private static int fromImapPort = 143;
@@ -42,10 +43,42 @@ class Program
     private static string AzureSubscription = "ad600bd7bbb84bda813532091b74fd2b";
     private static string AzureServer = "westeurope";
 
+    public static MailboxAddress Sender { get; private set; }
+    public static MailboxAddress Recipient { get; private set; }
+
+    public static MimeMessage Forward(MimeMessage original, MailboxAddress from, InternetAddress to)
+    {
+        var message = new MimeMessage();
+        message.From.Add(from);
+        message.To.Add(to);
+
+        // set the forwarded subject
+        if (!original.Subject.StartsWith("FW:", StringComparison.OrdinalIgnoreCase))
+            message.Subject = "FW: " + original.Subject;
+        else
+            message.Subject = original.Subject;
+
+        // create the main textual body of the message
+        var text = new TextPart("plain") { Text = "Here's the forwarded message: Test för forward av mail" };
+
+        // create the message/rfc822 attachment for the original message
+        var rfc822 = new MessagePart { Message = original };
+
+        // create a multipart/mixed container for the text body and the forwarded message
+        var multipart = new Multipart("mixed");
+        multipart.Add(text);
+        multipart.Add(rfc822);
+
+        // set the multipart as the body of the message
+        message.Body = multipart;
+
+        return message;
+    }
 
     async static Task FromFile(SpeechConfig speechConfig)
     {
-        var fileToSave = FileToSave;
+        //var fileToSave = FileToSave;
+        string fileToSave;
 
         using (var client = new Pop3Client())
         {
@@ -55,9 +88,9 @@ class Program
 
             for (int i = 0; i < client.Count; i++)
             {
-                var message = client.GetMessage(i);
+                eMail = client.GetMessage(i);
 
-                foreach (var attachment in message.Attachments)
+                foreach (var attachment in eMail.Attachments)
                 {
                     if (attachment is MessagePart)
                     {
@@ -79,15 +112,26 @@ class Program
                         {
                             part.Content.DecodeTo(stream);
                         }
-
+                        // Här ändra till rätt filnamn
+                        fileToSave = FileFromPath + "\\" + fileName;
                         using (var stream = File.Create(fileToSave))
                         {
                             part.Content.DecodeTo(stream);
                         }
                     }
                 }
-                Console.WriteLine("Subject: {0}", message.Subject);
-
+                Console.WriteLine("Subject: {0}", eMail.Subject);
+                // Forwarding
+                Sender = new MailboxAddress(fromName, fromEmail);
+                Recipient = new MailboxAddress(toName, toEmail);
+                var mailToForward = Forward(eMail, Sender, Recipient);
+                using (var smtp = new MailKit.Net.Smtp.SmtpClient())
+                {
+                    await smtp.ConnectAsync(toClient, toPort, false);
+                    await smtp.AuthenticateAsync(fromEmail, passw);
+                    await smtp.SendAsync(mailToForward);
+                    await smtp.DisconnectAsync(true);
+                }
             }
             client.Disconnect(true);
         }
@@ -111,6 +155,16 @@ class Program
     //{
     //    File.WriteAllText(FileToWrite, text);
     //}
+
+    static void checkFolder()
+    {
+
+    }
+
+    static void checkJson()
+    {
+
+    }
 
     static void readJson()
     {
@@ -142,6 +196,8 @@ class Program
 
 async static Task Main(string[] args)
     {
+        checkFolder();
+        checkJson();
         readJson();
         var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
         speechConfig.SpeechRecognitionLanguage = "sv-SE";
