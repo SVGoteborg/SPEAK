@@ -156,17 +156,45 @@ class Program
     //    File.WriteAllText(FileToWrite, text);
     //}
 
-    static void checkFolder()
+    static void CheckFolder(string targetPath)
     {
+        if (!Directory.Exists(targetPath))
+        {
+            Directory.CreateDirectory(targetPath);
+        }
+    }
+
+    static void CheckJson()
+    {
+        if (!File.Exists(jsonSettings))
+        {
+            //File.Create(jsonSettings);
+            Console.WriteLine("File settings.json don't exist");
+            JObject o1 = new JObject(
+                new JProperty("FileFromPath", "C:\\AppSpeak\\ljud"),
+                new JProperty("fromName", "Avvikelse"),
+                new JProperty("fromEmail", "avvikelse@testboka.net"),
+                new JProperty("fromClient", "mail.simply.com"),
+                new JProperty("fromPort", 110),
+                new JProperty("fromImapPort", 143),
+                new JProperty("toClient", "smtp.simply.com"),
+                new JProperty("toPort", 587),
+                new JProperty("passw", "Elektronik!100"),
+                new JProperty("toName", "Avvikelse2"),
+                new JProperty("toEmail", "avvikelse2@testboka.net"),
+                new JProperty("AzureSubscription", "ad600bd7bbb84bda813532091b74fd2b"),
+                new JProperty("AzureServer", "westeurope"));
+            // write JSON directly to a file
+            using (StreamWriter file = File.CreateText(jsonSettings))
+            using (JsonTextWriter writer = new JsonTextWriter(file))
+            {
+                o1.WriteTo(writer);
+            }
+        }
 
     }
 
-    static void checkJson()
-    {
-
-    }
-
-    static void readJson()
+    static void ReadJson()
     {
         JObject o1 = JObject.Parse(File.ReadAllText(jsonSettings));
 
@@ -188,6 +216,7 @@ class Program
         toPort = (int)o1["toPort"];
         passw = (string)o1["passw"];
         toName = (string)o1["toName"];
+        toEmail = (string)o1["toEmail"];
         AzureSubscription = (string)o1["AzureSubscription"];
         AzureServer = (string)o1["AzureServer"];
 
@@ -196,9 +225,9 @@ class Program
 
 async static Task Main(string[] args)
     {
-        checkFolder();
-        checkJson();
-        readJson();
+        CheckFolder(FileFromPath);
+        CheckJson();
+        ReadJson();
         var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
         speechConfig.SpeechRecognitionLanguage = "sv-SE";
         await FromFile(speechConfig);
