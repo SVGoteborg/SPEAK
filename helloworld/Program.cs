@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using MailKit.Net.Pop3;
+using MailKit.Net.Imap;
 
 class Program
 {
@@ -221,16 +222,56 @@ class Program
         AzureServer = (string)o1["AzureServer"];
 
     }
-    
 
-async static Task Main(string[] args)
+    public static void TestImap()
+    {
+        using (var client = new ImapClient())
+        {
+            client.Connect(fromClient, fromImapPort, false);
+
+            client.Authenticate(fromEmail, passw);
+
+            // The Inbox folder is always available on all IMAP servers...
+            var inbox = client.Inbox;
+            inbox.Open(FolderAccess.ReadOnly);
+
+            Console.WriteLine("Total messages: {0}", inbox.Count);
+            Console.WriteLine("Recent messages: {0}", inbox.Recent);
+
+            for (int i = 0; i < inbox.Count; i++)
+            {
+                var message = inbox.GetMessage(i);
+                Console.WriteLine("Subject: {0}", message.Subject);
+                //Console.WriteLine("Subject: {0}", message.Subject);
+            }
+            // Get the first personal namespace and list the toplevel folders under it.
+            var personal = client.GetFolder(client.PersonalNamespaces[0]);
+            foreach (var folder in personal.GetSubfolders(false))
+            {
+                Console.WriteLine("[folder] {0} {1}", folder, folder.Name);
+            }
+
+            //List<long> uids = (List<long>)inbox.Search(SearchQuery.All);
+            //foreach (long uid in uids)
+            //{
+            //    Console.WriteLine("The message with a UID of {0} ",
+            //       uid);
+            //    //Console.WriteLine("The message with a UID of {0} in {1} is now {2} in {3}",
+            //    //   uid, folder.FullName, uidMap[uid], destination.FullName);
+            //}
+        }
+    }
+
+    async static Task Main(string[] args)
     {
         CheckFolder(FileFromPath);
         CheckJson();
         ReadJson();
-        var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
-        speechConfig.SpeechRecognitionLanguage = "sv-SE";
-        await FromFile(speechConfig);
+        //var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
+        //speechConfig.SpeechRecognitionLanguage = "sv-SE";
+        //await FromFile(speechConfig);
+
+        TestImap();
 
         // Send email
         //var message = new MimeMessage();
