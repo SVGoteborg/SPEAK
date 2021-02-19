@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using MailKit.Net.Pop3;
+using MailKit.Net.Imap;
 
 class Program
 {
@@ -156,17 +157,45 @@ class Program
     //    File.WriteAllText(FileToWrite, text);
     //}
 
-    static void checkFolder()
+    static void CheckFolder(string targetPath)
     {
+        if (!Directory.Exists(targetPath))
+        {
+            Directory.CreateDirectory(targetPath);
+        }
+    }
+
+    static void CheckJson()
+    {
+        if (!File.Exists(jsonSettings))
+        {
+            //File.Create(jsonSettings);
+            Console.WriteLine("File settings.json don't exist");
+            JObject o1 = new JObject(
+                new JProperty("FileFromPath", "C:\\AppSpeak\\ljud"),
+                new JProperty("fromName", "Avvikelse"),
+                new JProperty("fromEmail", "avvikelse@testboka.net"),
+                new JProperty("fromClient", "mail.simply.com"),
+                new JProperty("fromPort", 110),
+                new JProperty("fromImapPort", 143),
+                new JProperty("toClient", "smtp.simply.com"),
+                new JProperty("toPort", 587),
+                new JProperty("passw", "Elektronik!100"),
+                new JProperty("toName", "Avvikelse2"),
+                new JProperty("toEmail", "avvikelse2@testboka.net"),
+                new JProperty("AzureSubscription", "ad600bd7bbb84bda813532091b74fd2b"),
+                new JProperty("AzureServer", "westeurope"));
+            // write JSON directly to a file
+            using (StreamWriter file = File.CreateText(jsonSettings))
+            using (JsonTextWriter writer = new JsonTextWriter(file))
+            {
+                o1.WriteTo(writer);
+            }
+        }
 
     }
 
-    static void checkJson()
-    {
-
-    }
-
-    static void readJson()
+    static void ReadJson()
     {
         JObject o1 = JObject.Parse(File.ReadAllText(jsonSettings));
 
@@ -188,20 +217,61 @@ class Program
         toPort = (int)o1["toPort"];
         passw = (string)o1["passw"];
         toName = (string)o1["toName"];
+        toEmail = (string)o1["toEmail"];
         AzureSubscription = (string)o1["AzureSubscription"];
         AzureServer = (string)o1["AzureServer"];
 
     }
-    
 
-async static Task Main(string[] args)
+    public static void TestImap()
     {
-        checkFolder();
-        checkJson();
-        readJson();
-        var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
-        speechConfig.SpeechRecognitionLanguage = "sv-SE";
-        await FromFile(speechConfig);
+        using (var client = new ImapClient())
+        {
+            client.Connect(fromClient, fromImapPort, false);
+
+            client.Authenticate(fromEmail, passw);
+
+            // The Inbox folder is always available on all IMAP servers...
+            var inbox = client.Inbox;
+            inbox.Open(FolderAccess.ReadOnly);
+
+            Console.WriteLine("Total messages: {0}", inbox.Count);
+            Console.WriteLine("Recent messages: {0}", inbox.Recent);
+
+            for (int i = 0; i < inbox.Count; i++)
+            {
+                var message = inbox.GetMessage(i);
+                Console.WriteLine("Subject: {0}", message.Subject);
+                //Console.WriteLine("Subject: {0}", message.Subject);
+            }
+            // Get the first personal namespace and list the toplevel folders under it.
+            var personal = client.GetFolder(client.PersonalNamespaces[0]);
+            foreach (var folder in personal.GetSubfolders(false))
+            {
+                Console.WriteLine("[folder] {0} {1}", folder, folder.Name);
+            }
+
+            //List<long> uids = (List<long>)inbox.Search(SearchQuery.All);
+            //foreach (long uid in uids)
+            //{
+            //    Console.WriteLine("The message with a UID of {0} ",
+            //       uid);
+            //    //Console.WriteLine("The message with a UID of {0} in {1} is now {2} in {3}",
+            //    //   uid, folder.FullName, uidMap[uid], destination.FullName);
+            //}
+        }
+    }
+
+    async static Task Main(string[] args)
+    {
+        CheckFolder(FileFromPath);
+        CheckJson();
+        ReadJson();
+        //var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
+        //speechConfig.SpeechRecognitionLanguage = "sv-SE";
+        //await FromFile(speechConfig);
+
+        TestImap();
 
         // Send email
         //var message = new MimeMessage();
