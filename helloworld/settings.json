@@ -1,9 +1,13 @@
 {
-  "FileFromPath": "C:\\Users\\admin\\Desktop\\AppSpeak\\ljud",
+  "FileFromPath": "C:\\AppSpeak\\ljud",
   "fromName": "Avvikelse",
   "fromEmail": "avvikelse@testboka.net",
-  "Client": "smtp.simply.com",
-  "port": "587",
+  //kommentar
+  "fromClient": "mail.simply.com",
+  "fromPort": "110",
+  "fromImapPort": "143",
+  "toClient": "smtp.simply.com",
+  "toPort": "587",
   "passw": "Elektronik!100",
   "toName": "Avvikelse2",
   "toEmail": "avvikelse2@testboka.net",
