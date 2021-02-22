@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using MailKit.Net.Pop3;
 using MailKit.Net.Imap;
+using MailKit.Search;
 
 class Program
 {
@@ -20,6 +21,7 @@ class Program
     private static string FileFromPath = "C:\\AppSpeak\\ljud";
     //private static string FileFromPath = "C:\\Users\\admin\\Desktop\\AppSpeak\\ljud";
     private static string FileFromName;
+    private static string moveTo = "Transkriberad";
 
     //Kommer inte att behövas -----
     private static string FileFromName2 = "MSG00001.wav";
@@ -78,7 +80,6 @@ class Program
 
     async static Task FromFile(SpeechConfig speechConfig)
     {
-        //var fileToSave = FileToSave;
         string fileToSave;
 
         using (var client = new Pop3Client())
@@ -113,7 +114,6 @@ class Program
                         {
                             part.Content.DecodeTo(stream);
                         }
-                        // Här ändra till rätt filnamn
                         fileToSave = FileFromPath + "\\" + fileName;
                         using (var stream = File.Create(fileToSave))
                         {
@@ -137,6 +137,7 @@ class Program
             client.Disconnect(true);
         }
 
+        // Transcribing voice message
         //string[] fileArray = Directory.GetFiles(FileFromPath, "*.wav");
         //FileFromName = fileArray[0];
         //using var audioConfig = AudioConfig.FromWavFileInput(FileFromName);
@@ -151,11 +152,6 @@ class Program
         //TranscribedMessage = result.Text;
 
     }
-    // Skall tas bort
-    //static void SaveText(string text)
-    //{
-    //    File.WriteAllText(FileToWrite, text);
-    //}
 
     static void CheckFolder(string targetPath)
     {
@@ -173,6 +169,7 @@ class Program
             Console.WriteLine("File settings.json don't exist");
             JObject o1 = new JObject(
                 new JProperty("FileFromPath", "C:\\AppSpeak\\ljud"),
+                new JProperty("moveTo", "Transkriberad"),
                 new JProperty("fromName", "Avvikelse"),
                 new JProperty("fromEmail", "avvikelse@testboka.net"),
                 new JProperty("fromClient", "mail.simply.com"),
@@ -208,6 +205,7 @@ class Program
         // -------
 
         FileFromPath = (string)o1["FileFromPath"];
+        moveTo = (string)o1["moveTo"];
         fromName = (string)o1["fromName"];
         fromEmail = (string)o1["fromEmail"];
         fromClient = (string)o1["fromClient"];
@@ -220,10 +218,9 @@ class Program
         toEmail = (string)o1["toEmail"];
         AzureSubscription = (string)o1["AzureSubscription"];
         AzureServer = (string)o1["AzureServer"];
-
     }
 
-    public static void TestImap()
+    public static void MoveToFolderImap()
     {
         using (var client = new ImapClient())
         {
@@ -233,32 +230,48 @@ class Program
 
             // The Inbox folder is always available on all IMAP servers...
             var inbox = client.Inbox;
-            inbox.Open(FolderAccess.ReadOnly);
+            inbox.Open(FolderAccess.ReadWrite);
 
             Console.WriteLine("Total messages: {0}", inbox.Count);
             Console.WriteLine("Recent messages: {0}", inbox.Recent);
 
-            for (int i = 0; i < inbox.Count; i++)
-            {
-                var message = inbox.GetMessage(i);
-                Console.WriteLine("Subject: {0}", message.Subject);
-                //Console.WriteLine("Subject: {0}", message.Subject);
-            }
             // Get the first personal namespace and list the toplevel folders under it.
-            var personal = client.GetFolder(client.PersonalNamespaces[0]);
-            foreach (var folder in personal.GetSubfolders(false))
-            {
-                Console.WriteLine("[folder] {0} {1}", folder, folder.Name);
-            }
-
-            //List<long> uids = (List<long>)inbox.Search(SearchQuery.All);
-            //foreach (long uid in uids)
+            //var personal = client.GetFolder(client.PersonalNamespaces[0]);
+            //foreach (var folder in personal.GetSubfolders(false))
             //{
-            //    Console.WriteLine("The message with a UID of {0} ",
-            //       uid);
-            //    //Console.WriteLine("The message with a UID of {0} in {1} is now {2} in {3}",
-            //    //   uid, folder.FullName, uidMap[uid], destination.FullName);
+            //    Console.WriteLine("[folder] {0} {1} ", folder, folder.Name);
             //}
+
+            // fetch some useful metadata about each message in the folder...
+            //var items = inbox.Fetch(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Size | MessageSummaryItems.Flags);
+
+            // iterate over all of the messages and fetch them by UID
+            //foreach (var item in items)
+            //{
+            //    var message = inbox.GetMessage(item.UniqueId);
+
+            //    Console.WriteLine("The message is {0} bytes long", item.Size.Value);
+            //    Console.WriteLine("The message has the following flags set: {0}", item.Flags.Value);
+            //}
+            Console.WriteLine("uids?");
+            var uids = inbox.Search(SearchQuery.All);
+
+            //foreach (var uid in uids)
+            //{
+            //    // message is very long. The complete content of the mail.
+            //    var message = client.Inbox.GetMessage(uid);
+            //    Console.WriteLine("The message with a UID of {0} and message is  ", uid);
+            //}
+
+            IMailFolder destination = client.GetFolder(moveTo);
+            var uidMap = inbox.MoveTo(uids, destination);
+            foreach (var uid in uids)
+            {
+                Console.WriteLine("The message with a UID of {0} in {1} is now {2} in {3}",
+                                   uid, inbox.FullName, uidMap[uid], destination.FullName);
+            }
+            
+            client.Disconnect(true);
         }
     }
 
@@ -267,11 +280,12 @@ class Program
         CheckFolder(FileFromPath);
         CheckJson();
         ReadJson();
+        // Transcribing
         //var speechConfig = SpeechConfig.FromSubscription(AzureSubscription, AzureServer);
         //speechConfig.SpeechRecognitionLanguage = "sv-SE";
         //await FromFile(speechConfig);
 
-        TestImap();
+        MoveToFolderImap();
 
         // Send email
         //var message = new MimeMessage();
@@ -294,6 +308,8 @@ class Program
         //    client.Send(message);
         //    client.Disconnect(true);
         //}
+
+        // Deleting all files in folder ljud
         //DirectoryInfo di = new DirectoryInfo(FileFromPath);
 
         //foreach (FileInfo file in di.GetFiles())
@@ -305,6 +321,7 @@ class Program
     
 }
 
+// Not used code
 //
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
