@@ -21,7 +21,7 @@ class Program
     private static string FileFromPath = "C:\\AppSpeak\\ljud";
     //private static string FileFromPath = "C:\\Users\\admin\\Desktop\\AppSpeak\\ljud";
     private static string FileFromName;
-    private static string moveTo = "Transkriberad";
+    private static string moveTo = "Transkriberat";
 
     //Kommer inte att behövas -----
     private static string FileFromName2 = "MSG00001.wav";
@@ -62,7 +62,7 @@ class Program
             message.Subject = original.Subject;
 
         // create the main textual body of the message
-        var text = new TextPart("plain") { Text = "Here's the forwarded message: Test för forward av mail" };
+        var text = new TextPart("plain") { Text = TranscribedMessage };
 
         // create the message/rfc822 attachment for the original message
         var rfc822 = new MessagePart { Message = original };
@@ -121,6 +121,21 @@ class Program
                         }
                     }
                 }
+
+                // Transcribing voice message
+                //string[] fileArray = Directory.GetFiles(FileFromPath, "*.wav");
+                //FileFromName = fileArray[0];
+                //using var audioConfig = AudioConfig.FromWavFileInput(FileFromName);
+                ////using var audioConfig = AudioConfig.FromWavFileInput("PathToFile.wav");
+                //using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
+
+                //var result = await recognizer.RecognizeOnceAsync();
+                //Console.WriteLine($"RECOGNIZED: Text={result.Text}");
+                //// Skall tas bort
+                //SaveText(result.Text);
+
+                //TranscribedMessage = result.Text;
+
                 Console.WriteLine("Subject: {0}", eMail.Subject);
                 // Forwarding
                 Sender = new MailboxAddress(fromName, fromEmail);
@@ -133,23 +148,12 @@ class Program
                     await smtp.SendAsync(mailToForward);
                     await smtp.DisconnectAsync(true);
                 }
+                
             }
             client.Disconnect(true);
         }
 
-        // Transcribing voice message
-        //string[] fileArray = Directory.GetFiles(FileFromPath, "*.wav");
-        //FileFromName = fileArray[0];
-        //using var audioConfig = AudioConfig.FromWavFileInput(FileFromName);
-        ////using var audioConfig = AudioConfig.FromWavFileInput("PathToFile.wav");
-        //using var recognizer = new SpeechRecognizer(speechConfig, audioConfig);
-
-        //var result = await recognizer.RecognizeOnceAsync();
-        //Console.WriteLine($"RECOGNIZED: Text={result.Text}");
-        //// Skall tas bort
-        //SaveText(result.Text);
-
-        //TranscribedMessage = result.Text;
+        
 
     }
 
@@ -232,44 +236,21 @@ class Program
             var inbox = client.Inbox;
             inbox.Open(FolderAccess.ReadWrite);
 
+            // Bara för test -------
             Console.WriteLine("Total messages: {0}", inbox.Count);
             Console.WriteLine("Recent messages: {0}", inbox.Recent);
+            // -------
 
-            // Get the first personal namespace and list the toplevel folders under it.
-            //var personal = client.GetFolder(client.PersonalNamespaces[0]);
-            //foreach (var folder in personal.GetSubfolders(false))
-            //{
-            //    Console.WriteLine("[folder] {0} {1} ", folder, folder.Name);
-            //}
-
-            // fetch some useful metadata about each message in the folder...
-            //var items = inbox.Fetch(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Size | MessageSummaryItems.Flags);
-
-            // iterate over all of the messages and fetch them by UID
-            //foreach (var item in items)
-            //{
-            //    var message = inbox.GetMessage(item.UniqueId);
-
-            //    Console.WriteLine("The message is {0} bytes long", item.Size.Value);
-            //    Console.WriteLine("The message has the following flags set: {0}", item.Flags.Value);
-            //}
-            Console.WriteLine("uids?");
             var uids = inbox.Search(SearchQuery.All);
-
-            //foreach (var uid in uids)
-            //{
-            //    // message is very long. The complete content of the mail.
-            //    var message = client.Inbox.GetMessage(uid);
-            //    Console.WriteLine("The message with a UID of {0} and message is  ", uid);
-            //}
 
             IMailFolder destination = client.GetFolder(moveTo);
             var uidMap = inbox.MoveTo(uids, destination);
-            foreach (var uid in uids)
-            {
-                Console.WriteLine("The message with a UID of {0} in {1} is now {2} in {3}",
-                                   uid, inbox.FullName, uidMap[uid], destination.FullName);
-            }
+            // Behövs inte för test ------
+            //foreach (var uid in uids)
+            //{
+            //    Console.WriteLine("The message with a UID of {0} in {1} is now {2} in {3}",
+            //                       uid, inbox.FullName, uidMap[uid], destination.FullName);
+            //}    --------
             
             client.Disconnect(true);
         }
@@ -286,28 +267,6 @@ class Program
         //await FromFile(speechConfig);
 
         MoveToFolderImap();
-
-        // Send email
-        //var message = new MimeMessage();
-        //message.From.Add(new MailboxAddress(fromName, fromEmail));
-        //message.To.Add(new MailboxAddress(toName, toEmail));
-        //message.Subject = "Transkriberad text";
-
-        //message.Body = new TextPart("plain")
-        //{
-        //    Text = TranscribedMessage
-        //};
-
-        //using (var client = new SmtpClient())
-        //{
-        //    client.Connect(toClient, toPort, false);
-
-        //    // Note: only needed if the SMTP server requires authentication
-        //    client.Authenticate(fromEmail, passw);
-
-        //    client.Send(message);
-        //    client.Disconnect(true);
-        //}
 
         // Deleting all files in folder ljud
         //DirectoryInfo di = new DirectoryInfo(FileFromPath);
